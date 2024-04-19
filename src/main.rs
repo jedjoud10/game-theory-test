@@ -9,24 +9,24 @@ use hsv::hsv_to_rgb;
 use owo_colors::{OwoColorize, Style};
 use std::cmp::Ordering;
 use strats::Strategy;
-use textplots::{AxisBuilder, Chart, ColorPlot, Plot, Shape, TickDisplayBuilder};
-use tinyrand::{Probability, Rand, RandRange, Seeded, StdRand};
+use textplots::{Chart, ColorPlot, Shape, TickDisplayBuilder};
+use tinyrand::{Rand, Seeded, StdRand};
 use tinyrand_std::ClockSeed;
 
 fn main() {
     let mut pool = Vec::<Box<dyn Strategy>>::default();
-    pool.push(Box::new(Random::default()));
-    pool.push(Box::new(Nice::default()));
-    pool.push(Box::new(NotNice::default()));
-    pool.push(Box::new(TitForTat::default()));
-    pool.push(Box::new(EachNthStealer::default()));
-    pool.push(Box::new(ApologeticGrudge::default()));
-    pool.push(Box::new(Grudge::default()));
-    pool.push(Box::new(Prober::default()));
+    pool.push(Box::<Random>::default());
+    pool.push(Box::new(Nice));
+    pool.push(Box::new(NotNice));
+    pool.push(Box::<TitForTat>::default());
+    pool.push(Box::<EachNthStealer>::default());
+    pool.push(Box::<ApologeticGrudge>::default());
+    pool.push(Box::<Grudge>::default());
+    pool.push(Box::<Prober>::default());
     let mut sums = vec![0i64; pool.len()];
     let mut per_round_sums = vec![[0i64; ROUNDS]; pool.len()];
 
-    let mut rng = StdRand::seed(ClockSeed::default().next_u64());
+    let mut rng = StdRand::seed(ClockSeed.next_u64());
     for (i, s1) in pool.iter().enumerate() {
         for (j, s2) in pool.iter().enumerate() {
             let mut p1 = s1.poolify();
@@ -52,14 +52,14 @@ fn main() {
             };
 
             let avg = (temp[0] + temp[1]) / 2;
-            let d1 = temp[0] as i64 - avg as i64;
-            let d2 = temp[1] as i64 - avg as i64;
+            let _d1 = temp[0] - avg;
+            let _d2 = temp[1] - avg;
             println!("{line} => ({}, {})", temp[0], temp[1]);
         }
     }
 
     let mut output = pool.iter().zip(sums.iter()).enumerate().collect::<Vec<_>>();
-    output.sort_by(|(_, (_, a)), (_, (_, b))| b.cmp(&a));
+    output.sort_by(|(_, (_, a)), (_, (_, b))| b.cmp(a));
     let max = **output.iter().map(|(_, (_, a))| a).max().unwrap() as f32;
     for (i, (strat, &sum)) in output {
         let (r, g, b) = hsv_to_rgb((i as f64 * 360.0) / (pool.len() as f64), 1.0, 0.5);
@@ -86,8 +86,8 @@ fn main() {
                 let last = cpy[i][last] as f32;
                 let cur = cpy[i][cur] as f32;
                 let mix = x.fract();
-                let val = cur * mix + last * (1.0 - mix);
-                val
+                
+                cur * mix + last * (1.0 - mix)
             }
         })));
     }

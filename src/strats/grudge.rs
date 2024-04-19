@@ -8,7 +8,7 @@ use crate::{
 #[derive(Default, Clone)]
 pub struct Grudge(bool);
 impl Strategy for Grudge {
-    fn decide(&mut self, round: usize) -> Decision {
+    fn decide(&mut self, _round: usize) -> Decision {
         match self.0 {
             true => Decision::Steal,
             false => Decision::Share,

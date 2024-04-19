@@ -21,7 +21,7 @@ pub use tit_for_tat::*;
 pub trait Strategy {
     fn decide(&mut self, round: usize) -> Decision;
     fn poolify(&self) -> Box<dyn StratPool>;
-    fn score(&mut self, s: i64) {}
+    fn score(&mut self, _s: i64) {}
     fn mutate(&mut self) {}
     fn name(&self) -> &'static str;
 }

@@ -1,7 +1,7 @@
 use super::Strategy;
 use crate::{
     decision::Decision,
-    factors::{ENTITIES_PER_POOL, FULLY_STOLEN_POINTS, SHARED_POINTS},
+    factors::{ENTITIES_PER_POOL, FULLY_STOLEN_POINTS},
     pool::StratPool,
 };
 
@@ -11,10 +11,10 @@ pub struct Prober {
     abuse: bool,
 }
 impl Strategy for Prober {
-    fn decide(&mut self, round: usize) -> Decision {
+    fn decide(&mut self, _round: usize) -> Decision {
         if !self.tested {
-            return Decision::Steal;
             self.tested = true;
+            return Decision::Steal;
         }
 
         match self.abuse {

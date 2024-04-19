@@ -8,7 +8,7 @@ use crate::{
 #[derive(Default, Clone)]
 pub struct ApologeticGrudge(u32);
 impl Strategy for ApologeticGrudge {
-    fn decide(&mut self, round: usize) -> Decision {
+    fn decide(&mut self, _round: usize) -> Decision {
         match self.0 > 2 {
             true => {
                 self.0 = 0;

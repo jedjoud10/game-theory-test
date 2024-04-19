@@ -8,7 +8,7 @@ use crate::{
 #[derive(Default, Clone)]
 pub struct TitForTat(bool);
 impl Strategy for TitForTat {
-    fn decide(&mut self, round: usize) -> Decision {
+    fn decide(&mut self, _round: usize) -> Decision {
         let cpy = self.0;
         self.0 = false;
         match cpy {

@@ -1,14 +1,14 @@
 use super::Strategy;
 use crate::{
     decision::Decision,
-    factors::{ENTITIES_PER_POOL, SHARED_POINTS},
+    factors::ENTITIES_PER_POOL,
     pool::StratPool,
 };
 
 #[derive(Default, Clone)]
 pub struct NotNice;
 impl Strategy for NotNice {
-    fn decide(&mut self, round: usize) -> Decision {
+    fn decide(&mut self, _round: usize) -> Decision {
         Decision::Steal
     }
 
