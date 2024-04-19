@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use hsv::hsv_to_rgb;
-use owo_colors::OwoColorize;
+use owo_colors::{OwoColorize, Style};
 use textplots::{Chart, ColorPlot, Plot, Shape};
 use tinyrand::{Probability, Rand, RandRange, Seeded, StdRand};
 use tinyrand_std::ClockSeed;
@@ -12,23 +12,24 @@ pub enum Decision {
     Steal,
 }
 
-const SHARED_POINTS: u64 = 4;
-const HALF_STOLEN_POINTS: u64 = 1;
-const FULLY_STOLEN_POINTS: u64 = 5;
+const SHARED_POINTS: i64 = 3;
+const HALF_STOLEN_POINTS: i64 = 1;
+const STOLEN_PENALTY: i64 = -1;
+const FULLY_STOLEN_POINTS: i64 = 2;
 const ENTITIES_PER_POOL: usize = 100;
-const ROUNDS: usize = 200;
+const ROUNDS: usize = 50;
 
-fn score(a: Decision, b: Decision, rng: &mut StdRand) -> (u64, u64) {
+fn score(a: Decision, b: Decision, rng: &mut StdRand) -> (i64, i64) {
     match (a, b) {
         (Decision::Share, Decision::Share) => (SHARED_POINTS, SHARED_POINTS),
-        (Decision::Share, Decision::Steal) => (0, FULLY_STOLEN_POINTS),
-        (Decision::Steal, Decision::Share) => (FULLY_STOLEN_POINTS, 0),
+        (Decision::Share, Decision::Steal) => (STOLEN_PENALTY, FULLY_STOLEN_POINTS),
+        (Decision::Steal, Decision::Share) => (FULLY_STOLEN_POINTS, STOLEN_PENALTY),
         (Decision::Steal, Decision::Steal) => (HALF_STOLEN_POINTS, HALF_STOLEN_POINTS),
     }
 }
 
 trait StratPool {
-    fn score(&mut self, other: &mut Box<dyn StratPool>, sums: &mut [u64; 2], rng: &mut StdRand, round: usize) {
+    fn score(&mut self, other: &mut Box<dyn StratPool>, sums: &mut [i64; 2], rng: &mut StdRand, round: usize) {
         let a = self.decide_all(round);
         let b = other.decide_all(round);
         let mut sa = [0; ENTITIES_PER_POOL];
@@ -45,7 +46,7 @@ trait StratPool {
     }
 
     fn decide_all(&mut self, round: usize) -> [Decision; ENTITIES_PER_POOL];
-    fn update_all(&mut self, scores: [u64; ENTITIES_PER_POOL]);
+    fn update_all(&mut self, scores: [i64; ENTITIES_PER_POOL]);
 }
 
 impl<T: Strategy> StratPool for Vec<T> {
@@ -59,7 +60,7 @@ impl<T: Strategy> StratPool for Vec<T> {
         arr
     }
 
-    fn update_all(&mut self, scores: [u64; ENTITIES_PER_POOL]) {
+    fn update_all(&mut self, scores: [i64; ENTITIES_PER_POOL]) {
         for (strat, score) in self.iter_mut().zip(scores) {
             strat.score(score);
         }
@@ -69,7 +70,7 @@ impl<T: Strategy> StratPool for Vec<T> {
 trait Strategy {
     fn decide(&mut self, round: usize) -> Decision;
     fn poolify(&self) -> Box<dyn StratPool>;
-    fn score(&mut self, s: u64) {}
+    fn score(&mut self, s: i64) {}
     fn name(&self) -> &'static str; 
 }
 
@@ -106,7 +107,7 @@ impl Strategy for TitForTat {
         }
     }
 
-    fn score(&mut self, s: u64) {
+    fn score(&mut self, s: i64) {
         self.0 = s < SHARED_POINTS;
     }
     
@@ -121,16 +122,16 @@ impl Strategy for TitForTat {
 
 
 #[derive(Default, Clone)]
-struct Test2(u32);
-impl Strategy for Test2 {
+struct Grudge(u32);
+impl Strategy for Grudge {
     fn decide(&mut self, round: usize) -> Decision {
-        match self.0 < 4 {
+        match self.0 > 2 {
             true => Decision::Steal,
             false => Decision::Share,
         }
     }
 
-    fn score(&mut self, s: u64) {
+    fn score(&mut self, s: i64) {
         if s < SHARED_POINTS {
             self.0 += 1;
         } else {
@@ -139,32 +140,35 @@ impl Strategy for Test2 {
     }
     
     fn poolify(&self) -> Box<dyn StratPool> {
-        Box::new(vec![Test2(0); ENTITIES_PER_POOL])
+        Box::new(vec![Grudge(0); ENTITIES_PER_POOL])
     }
     
     fn name(&self) -> &'static str {
-        "Test2"
+        "Grudge"
     }
 }
 
 #[derive(Default, Clone)]
-struct Test(usize);
-impl Strategy for Test {
+struct EachNthStealer(usize);
+impl Strategy for EachNthStealer {
     fn decide(&mut self, round: usize) -> Decision {
         self.0 += 1;
         self.0 %= 10;
-        match (self.0 == 0) {
+        match self.0 == 0 {
             true => Decision::Steal,
             false => Decision::Share,
         }
     }
     
     fn poolify(&self) -> Box<dyn StratPool> {
-        Box::new(vec![Test(0); ENTITIES_PER_POOL])
+        let seed = ClockSeed::default().next_u64();
+        let mut rng = StdRand::seed(seed);
+        let vec = (0..ENTITIES_PER_POOL).map(|i| EachNthStealer(rng.next_range(0..9))).collect::<Vec<_>>();
+        Box::new(vec)
     }
     
     fn name(&self) -> &'static str {
-        "Test"
+        "Each N-th Stealer"
     }
 }
 
@@ -207,10 +211,10 @@ fn main() {
     pool.push(Box::new(Nice::default()));
     pool.push(Box::new(NotNice::default()));
     pool.push(Box::new(TitForTat::default()));
-    pool.push(Box::new(Test::default()));
-    pool.push(Box::new(Test2::default()));
-    let mut sums = vec![0; pool.len()];
-    let mut per_round_sums = vec![[0u64;ROUNDS]; pool.len()];
+    pool.push(Box::new(EachNthStealer::default()));
+    pool.push(Box::new(Grudge::default()));
+    let mut sums = vec![0i64; pool.len()];
+    let mut per_round_sums = vec![[0i64;ROUNDS]; pool.len()];
 
     let mut rng = StdRand::seed(ClockSeed::default().next_u64());
     for (i, s1) in pool.iter().enumerate() {
@@ -218,7 +222,7 @@ fn main() {
             let mut p1 = s1.poolify();
             let mut p2 = s2.poolify();
             
-            let mut temp: [u64; 2] = [0, 0];
+            let mut temp: [i64; 2] = [0, 0];
             for r in 0..ROUNDS {
                 temp[0] = 0;
                 temp[1] = 0;
@@ -244,11 +248,12 @@ fn main() {
         }
     }
     
-    let mut output = pool.iter().zip(sums.iter()).collect::<Vec<_>>();
-    output.sort_by(|(_, a), (_, b)| b.cmp(&a));
-    let max = **output.iter().map(|(_, a)| a).max().unwrap() as f32;
-    for (strat, &sum) in output {
-        println!("{}: {}%", strat.name(), ((sum as f32 / max) * 100.0));
+    let mut output = pool.iter().zip(sums.iter()).enumerate().collect::<Vec<_>>();
+    output.sort_by(|(_, (_, a)), (_, (_, b))| b.cmp(&a));
+    let max = **output.iter().map(|(_, (_, a))| a).max().unwrap() as f32;
+    for (i, (strat, &sum)) in output {
+        let (r,g,b) = hsv_to_rgb((i as f64 * 360.0) / (pool.len() as f64), 1.0, 0.5);
+        println!("{}: {}%", strat.name().style(Style::new().truecolor(r, g, b)), ((sum as f32 / max) * 100.0));
     }
 
     let mut c = Chart::new(280, 60, 0.0, (ROUNDS-1) as f32);
