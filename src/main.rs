@@ -1,7 +1,8 @@
 use std::cmp::Ordering;
 
+use hsv::hsv_to_rgb;
 use owo_colors::OwoColorize;
-use textplots::{Chart, Plot, Shape};
+use textplots::{Chart, ColorPlot, Plot, Shape};
 use tinyrand::{Probability, Rand, RandRange, Seeded, StdRand};
 use tinyrand_std::ClockSeed;
 
@@ -106,7 +107,7 @@ impl Strategy for TitForTat {
     }
 
     fn score(&mut self, s: u64) {
-        self.0 = s == 0;
+        self.0 = s < SHARED_POINTS;
     }
     
     fn poolify(&self) -> Box<dyn StratPool> {
@@ -118,18 +119,48 @@ impl Strategy for TitForTat {
     }
 }
 
+
 #[derive(Default, Clone)]
-struct Test;
+struct Test2(u32);
+impl Strategy for Test2 {
+    fn decide(&mut self, round: usize) -> Decision {
+        match self.0 < 4 {
+            true => Decision::Steal,
+            false => Decision::Share,
+        }
+    }
+
+    fn score(&mut self, s: u64) {
+        if s < SHARED_POINTS {
+            self.0 += 1;
+        } else {
+            self.0 = 0;
+        }
+    }
+    
+    fn poolify(&self) -> Box<dyn StratPool> {
+        Box::new(vec![Test2(0); ENTITIES_PER_POOL])
+    }
+    
+    fn name(&self) -> &'static str {
+        "Test2"
+    }
+}
+
+#[derive(Default, Clone)]
+struct Test(usize);
 impl Strategy for Test {
     fn decide(&mut self, round: usize) -> Decision {
-        match round < (ROUNDS / 2) {
+        self.0 += 1;
+        self.0 %= 10;
+        match (self.0 == 0) {
             true => Decision::Steal,
             false => Decision::Share,
         }
     }
     
     fn poolify(&self) -> Box<dyn StratPool> {
-        Box::new(vec![TitForTat(false); ENTITIES_PER_POOL])
+        Box::new(vec![Test(0); ENTITIES_PER_POOL])
     }
     
     fn name(&self) -> &'static str {
@@ -177,6 +208,7 @@ fn main() {
     pool.push(Box::new(NotNice::default()));
     pool.push(Box::new(TitForTat::default()));
     pool.push(Box::new(Test::default()));
+    pool.push(Box::new(Test2::default()));
     let mut sums = vec![0; pool.len()];
     let mut per_round_sums = vec![[0u64;ROUNDS]; pool.len()];
 
@@ -188,11 +220,13 @@ fn main() {
             
             let mut temp: [u64; 2] = [0, 0];
             for r in 0..ROUNDS {
+                temp[0] = 0;
+                temp[1] = 0;
                 p1.score(&mut p2, &mut temp, &mut rng, r);
                 sums[i] += temp[0];
                 sums[j] += temp[1];
-                per_round_sums[i][r] += temp[0];
-                per_round_sums[j][r] += temp[1];
+                per_round_sums[i][r] = temp[0];
+                per_round_sums[j][r] = temp[1];
             }
 
             let name1 = s1.name();
@@ -217,7 +251,7 @@ fn main() {
         println!("{}: {}%", strat.name(), ((sum as f32 / max) * 100.0));
     }
 
-    let mut c = Chart::new(180, 60, 0.0, (ROUNDS-1) as f32);
+    let mut c = Chart::new(280, 60, 0.0, (ROUNDS-1) as f32);
 
     let mut aca = &mut c;
     
@@ -235,7 +269,8 @@ fn main() {
     }
 
     for i in 0..pool.len() {
-        aca = aca.lineplot(&shapes[i]);
+        let (r,g,b) = hsv_to_rgb((i as f64 * 360.0) / (pool.len() as f64), 1.0, 0.5);
+        aca = aca.linecolorplot(&shapes[i], rgb::RGB::new(r, g, b));
     }
 
     aca.display();

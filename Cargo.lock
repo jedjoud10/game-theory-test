@@ -38,11 +38,19 @@ checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 name = "game-theory-test"
 version = "0.1.0"
 dependencies = [
+ "hsv",
  "owo-colors",
+ "rgb",
  "textplots",
  "tinyrand",
  "tinyrand-std",
 ]
+
+[[package]]
+name = "hsv"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a03664f940932e7453c5f1dd0ce278a7af2ff47d440fad00f679b4f5bf0da869"
 
 [[package]]
 name = "lazy_static"
