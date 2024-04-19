@@ -13,7 +13,10 @@ use textplots::{Chart, ColorPlot, Shape, TickDisplayBuilder};
 use tinyrand::{Rand, Seeded, StdRand};
 use tinyrand_std::ClockSeed;
 
+use crate::pool::score_pool;
+
 fn main() {
+    // Create a pool of multiple boxed strategies so we can duplicate them into their own entity pools
     let mut pool = Vec::<Box<dyn Strategy>>::default();
     pool.push(Box::<Random>::default());
     pool.push(Box::new(Nice));
@@ -23,8 +26,10 @@ fn main() {
     pool.push(Box::<ApologeticGrudge>::default());
     pool.push(Box::<Grudge>::default());
     pool.push(Box::<Prober>::default());
-    let mut sums = vec![0i64; pool.len()];
-    let mut per_round_sums = vec![[0i64; ROUNDS]; pool.len()];
+
+    // Total strategy point sum and point sums gained each round 
+    let mut total_sums = vec![0i64; pool.len()];
+    let mut delta_sums = vec![[0i64; ROUNDS]; pool.len()];
 
     let mut rng = StdRand::seed(ClockSeed.next_u64());
     for (i, s1) in pool.iter().enumerate() {
@@ -32,17 +37,19 @@ fn main() {
             let mut p1 = s1.poolify();
             let mut p2 = s2.poolify();
 
+            // Make the 2 pools "fight" each other for n number of rounds
             let mut temp: [i64; 2] = [0, 0];
             for r in 0..ROUNDS {
                 temp[0] = 0;
                 temp[1] = 0;
-                p1.score(&mut p2, &mut temp, &mut rng, r);
-                sums[i] += temp[0];
-                sums[j] += temp[1];
-                per_round_sums[i][r] = temp[0];
-                per_round_sums[j][r] = temp[1];
+                score_pool(&mut p1, &mut p2, &mut temp, &mut rng, r);
+                total_sums[i] += temp[0];
+                total_sums[j] += temp[1];
+                delta_sums[i][r] = temp[0];
+                delta_sums[j][r] = temp[1];
             }
 
+            // Some cool debugging to see which strategy worked best in this special case
             let name1 = s1.name();
             let name2 = s2.name();
             let line = match temp[0].cmp(&temp[1]) {
@@ -51,14 +58,12 @@ fn main() {
                 Ordering::Greater => format!("{} VS {}", name1.green(), name2.red()),
             };
 
-            let avg = (temp[0] + temp[1]) / 2;
-            let _d1 = temp[0] - avg;
-            let _d2 = temp[1] - avg;
             println!("{line} => ({}, {})", temp[0], temp[1]);
         }
     }
 
-    let mut output = pool.iter().zip(sums.iter()).enumerate().collect::<Vec<_>>();
+    // Very ugly code to try to find relative percentage and to sort the strats
+    let mut output = pool.iter().zip(total_sums.iter()).enumerate().collect::<Vec<_>>();
     output.sort_by(|(_, (_, a)), (_, (_, b))| b.cmp(a));
     let max = **output.iter().map(|(_, (_, a))| a).max().unwrap() as f32;
     for (i, (strat, &sum)) in output {
@@ -70,12 +75,11 @@ fn main() {
         );
     }
 
-    let mut c = Chart::new(280, 120, 0.0, (ROUNDS - 1) as f32);
-
-    let mut aca = c.y_tick_display(textplots::TickDisplay::Dense);
-
+    // Create a chart using the lineplot crate
+    let mut chart = Chart::new(280, 120, 0.0, (ROUNDS - 1) as f32);
+    let mut chart = chart.y_tick_display(textplots::TickDisplay::Dense);
     let mut shapes = Vec::<Shape>::default();
-    let cpy = &per_round_sums;
+    let cpy = &delta_sums;
     for i in 0..pool.len() {
         shapes.push(Shape::Continuous(Box::new(move |x| {
             if x < 1.0 {
@@ -92,10 +96,11 @@ fn main() {
         })));
     }
 
+    // Add the line plots from the temp shapes
     for i in 0..pool.len() {
         let (r, g, b) = hsv_to_rgb((i as f64 * 360.0) / (pool.len() as f64), 1.0, 1.0);
-        aca = aca.linecolorplot(&shapes[i], rgb::RGB::new(r, g, b));
+        chart = chart.linecolorplot(&shapes[i], rgb::RGB::new(r, g, b));
     }
 
-    aca.display();
+    chart.display();
 }
