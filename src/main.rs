@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 use hsv::hsv_to_rgb;
 use owo_colors::{OwoColorize, Style};
-use textplots::{Chart, ColorPlot, Plot, Shape};
+use textplots::{AxisBuilder, Chart, ColorPlot, Plot, Shape, TickDisplayBuilder};
 use tinyrand::{Probability, Rand, RandRange, Seeded, StdRand};
 use tinyrand_std::ClockSeed;
 
@@ -17,9 +17,18 @@ const HALF_STOLEN_POINTS: i64 = 1;
 const STOLEN_PENALTY: i64 = -1;
 const FULLY_STOLEN_POINTS: i64 = 2;
 const ENTITIES_PER_POOL: usize = 100;
-const ROUNDS: usize = 50;
+const NOISE: f64 = 0.1;
+const ROUNDS: usize = 100;
+const GENERATIONS: usize = 100;
 
-fn score(a: Decision, b: Decision, rng: &mut StdRand) -> (i64, i64) {
+fn score(mut a: Decision, b: Decision, rng: &mut StdRand) -> (i64, i64) {
+    if rng.next_bool(Probability::new(NOISE)) {
+        a = match a {
+            Decision::Share => Decision::Steal,
+            Decision::Steal => Decision::Share,
+        }
+    }
+    
     match (a, b) {
         (Decision::Share, Decision::Share) => (SHARED_POINTS, SHARED_POINTS),
         (Decision::Share, Decision::Steal) => (STOLEN_PENALTY, FULLY_STOLEN_POINTS),
@@ -71,6 +80,7 @@ trait Strategy {
     fn decide(&mut self, round: usize) -> Decision;
     fn poolify(&self) -> Box<dyn StratPool>;
     fn score(&mut self, s: i64) {}
+    fn mutate(&mut self) {}
     fn name(&self) -> &'static str; 
 }
 
@@ -120,13 +130,40 @@ impl Strategy for TitForTat {
     }
 }
 
+#[derive(Default, Clone)]
+struct Prober {
+    tested: bool,
+    abuse: bool,
+}
+impl Strategy for Prober {
+    fn decide(&mut self, round: usize) -> Decision {
+        match self.abuse {
+            true => Decision::Steal,
+            false => Decision::Share,
+        }
+    }
+
+    fn score(&mut self, s: i64) {
+    }
+    
+    fn poolify(&self) -> Box<dyn StratPool> {
+        Box::new(vec![Prober { tested: false, abuse: false }; ENTITIES_PER_POOL])
+    }
+    
+    fn name(&self) -> &'static str {
+        "Tit for tat"
+    }
+}
 
 #[derive(Default, Clone)]
-struct Grudge(u32);
-impl Strategy for Grudge {
+struct ApologeticGrudge(u32);
+impl Strategy for ApologeticGrudge {
     fn decide(&mut self, round: usize) -> Decision {
         match self.0 > 2 {
-            true => Decision::Steal,
+            true => {
+                self.0 = 0;
+                Decision::Steal
+            },
             false => Decision::Share,
         }
     }
@@ -140,7 +177,30 @@ impl Strategy for Grudge {
     }
     
     fn poolify(&self) -> Box<dyn StratPool> {
-        Box::new(vec![Grudge(0); ENTITIES_PER_POOL])
+        Box::new(vec![ApologeticGrudge(0); ENTITIES_PER_POOL])
+    }
+    
+    fn name(&self) -> &'static str {
+        "Apologetic Grudge"
+    }
+}
+
+#[derive(Default, Clone)]
+struct Grudge(bool);
+impl Strategy for Grudge {
+    fn decide(&mut self, round: usize) -> Decision {
+        match self.0 {
+            true => Decision::Steal,
+            false => Decision::Share,
+        }
+    }
+
+    fn score(&mut self, s: i64) {
+        self.0 |= s < SHARED_POINTS;
+    }
+    
+    fn poolify(&self) -> Box<dyn StratPool> {
+        Box::new(vec![Grudge(false); ENTITIES_PER_POOL])
     }
     
     fn name(&self) -> &'static str {
@@ -212,9 +272,11 @@ fn main() {
     pool.push(Box::new(NotNice::default()));
     pool.push(Box::new(TitForTat::default()));
     pool.push(Box::new(EachNthStealer::default()));
+    pool.push(Box::new(ApologeticGrudge::default()));
     pool.push(Box::new(Grudge::default()));
     let mut sums = vec![0i64; pool.len()];
     let mut per_round_sums = vec![[0i64;ROUNDS]; pool.len()];
+    let mut per_generation_sums = vec![[0i64;GENERATIONS]; pool.len()];
 
     let mut rng = StdRand::seed(ClockSeed::default().next_u64());
     for (i, s1) in pool.iter().enumerate() {
@@ -256,25 +318,30 @@ fn main() {
         println!("{}: {}%", strat.name().style(Style::new().truecolor(r, g, b)), ((sum as f32 / max) * 100.0));
     }
 
-    let mut c = Chart::new(280, 60, 0.0, (ROUNDS-1) as f32);
+    let mut c = Chart::new(280, 120, 0.0, (ROUNDS-1) as f32);
 
-    let mut aca = &mut c;
+    let mut aca = c.y_tick_display(textplots::TickDisplay::Dense);
     
     let mut shapes = Vec::<Shape>::default();
     let cpy = &per_round_sums;
     for i in 0..pool.len() {
         shapes.push(Shape::Continuous(Box::new(move |x| {
-            if x < 0.0 {
+            if x < 1.0 {
                 0.0f32
             } else {
-                let r = x.round() as usize;
-                cpy[i][r] as f32
+                let last = (x.floor() as usize - 1).min(ROUNDS-1);
+                let cur = (x.floor() as usize).min(ROUNDS-1);
+                let last = cpy[i][last] as f32;
+                let cur = cpy[i][cur] as f32;
+                let mix = x.fract();
+                let val = cur * mix + last * (1.0-mix);
+                val
             }
         })));
     }
 
     for i in 0..pool.len() {
-        let (r,g,b) = hsv_to_rgb((i as f64 * 360.0) / (pool.len() as f64), 1.0, 0.5);
+        let (r,g,b) = hsv_to_rgb((i as f64 * 360.0) / (pool.len() as f64), 1.0, 1.0);
         aca = aca.linecolorplot(&shapes[i], rgb::RGB::new(r, g, b));
     }
 
