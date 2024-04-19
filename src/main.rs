@@ -12,18 +12,25 @@ pub enum Decision {
     Steal,
 }
 
-const SHARED_POINTS: i64 = 3;
+const SHARED_POINTS: i64 = 2;
 const HALF_STOLEN_POINTS: i64 = 1;
-const STOLEN_PENALTY: i64 = -1;
-const FULLY_STOLEN_POINTS: i64 = 2;
+const STOLEN_PENALTY: i64 = 0;
+const FULLY_STOLEN_POINTS: i64 = 3;
 const ENTITIES_PER_POOL: usize = 100;
-const NOISE: f64 = 0.1;
+const NOISE: f64 = 0.01;
 const ROUNDS: usize = 100;
 const GENERATIONS: usize = 100;
 
-fn score(mut a: Decision, b: Decision, rng: &mut StdRand) -> (i64, i64) {
+fn score(mut a: Decision, mut b: Decision, rng: &mut StdRand) -> (i64, i64) {
     if rng.next_bool(Probability::new(NOISE)) {
         a = match a {
+            Decision::Share => Decision::Steal,
+            Decision::Steal => Decision::Share,
+        }
+    }
+
+    if rng.next_bool(Probability::new(NOISE)) {
+        b = match b {
             Decision::Share => Decision::Steal,
             Decision::Steal => Decision::Share,
         }
@@ -137,6 +144,11 @@ struct Prober {
 }
 impl Strategy for Prober {
     fn decide(&mut self, round: usize) -> Decision {
+        if !self.tested {
+            return Decision::Steal;
+            self.tested = true;
+        }
+
         match self.abuse {
             true => Decision::Steal,
             false => Decision::Share,
@@ -144,6 +156,9 @@ impl Strategy for Prober {
     }
 
     fn score(&mut self, s: i64) {
+        if self.tested && s == FULLY_STOLEN_POINTS {
+            self.abuse = true;
+        }
     }
     
     fn poolify(&self) -> Box<dyn StratPool> {
@@ -151,7 +166,7 @@ impl Strategy for Prober {
     }
     
     fn name(&self) -> &'static str {
-        "Tit for tat"
+        "Prober"
     }
 }
 
@@ -274,6 +289,7 @@ fn main() {
     pool.push(Box::new(EachNthStealer::default()));
     pool.push(Box::new(ApologeticGrudge::default()));
     pool.push(Box::new(Grudge::default()));
+    pool.push(Box::new(Prober::default()));
     let mut sums = vec![0i64; pool.len()];
     let mut per_round_sums = vec![[0i64;ROUNDS]; pool.len()];
     let mut per_generation_sums = vec![[0i64;GENERATIONS]; pool.len()];
