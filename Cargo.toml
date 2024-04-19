@@ -1,0 +1,12 @@
+[package]
+name = "game-theory-test"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tinyrand = "0.5.0"
+owo-colors = "4.0.0"
+textplots = "0.8.6"
+tinyrand-std = "0.5.0"
