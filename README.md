@@ -11,3 +11,9 @@ All thanks to the ``textplots`` crate and ``owo-colors`` for beautiful teminal g
 ![image](https://github.com/jedjoud10/game-theory-test/assets/34755598/58113cb1-6ed8-4bda-85cc-565a542a37ec)
 
 ![image](https://github.com/jedjoud10/game-theory-test/assets/34755598/5209c011-d17d-4d97-bd56-43b1389bb013)
+
+
+# LICENSE
+Licensed under
+ * MIT license
+   ([LICENSE](LICENSE) or http://opensource.org/licenses/MIT)
