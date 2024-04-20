@@ -8,22 +8,18 @@ use crate::{
     pool::StratPool,
 };
 
-#[derive(Default)]
-pub struct Random(StdRand);
+#[derive(Default, Clone)]
+pub struct Random;
 impl Strategy for Random {
-    fn decide(&mut self, _round: usize) -> Decision {
-        match self.0.next_bool(Probability::new(0.5)) {
+    fn decide(&mut self, _round: usize, rng: &mut StdRand) -> Decision {
+        match rng.next_bool(Probability::new(0.5)) {
             true => Decision::Share,
             false => Decision::Steal,
         }
     }
 
-    fn poolify(&self) -> Box<dyn StratPool> {
-        let seed = ClockSeed.next_u64();
-        let vec = (0..ENTITIES_PER_POOL)
-            .map(|i| Random(StdRand::seed(i as u64 + seed)))
-            .collect::<Vec<_>>();
-        Box::new(vec)
+    fn poolify(&self, _rng: &mut StdRand) -> Box<dyn StratPool> {
+        Box::new(vec![Random; ENTITIES_PER_POOL])
     }
 
     fn name(&self) -> &'static str {

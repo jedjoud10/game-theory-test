@@ -1,3 +1,5 @@
+use tinyrand::StdRand;
+
 use super::Strategy;
 use crate::{
     decision::Decision,
@@ -6,12 +8,11 @@ use crate::{
 };
 
 #[derive(Default, Clone)]
-pub struct TwiceGrudge(u32);
-impl Strategy for TwiceGrudge {
-    fn decide(&mut self, _round: usize) -> Decision {
+pub struct TitForTwoTat(u32);
+impl Strategy for TitForTwoTat {
+    fn decide(&mut self, _round: usize, _rng: &mut StdRand) -> Decision {
         match self.0 >= 2 {
             true => {
-                self.0 = 0;
                 Decision::Steal
             }
             false => Decision::Share,
@@ -26,11 +27,11 @@ impl Strategy for TwiceGrudge {
         }
     }
 
-    fn poolify(&self) -> Box<dyn StratPool> {
-        Box::new(vec![TwiceGrudge(0); ENTITIES_PER_POOL])
+    fn poolify(&self, _rng: &mut StdRand) -> Box<dyn StratPool> {
+        Box::new(vec![TitForTwoTat(0); ENTITIES_PER_POOL])
     }
 
     fn name(&self) -> &'static str {
-        "Twice Grudge"
+        "Tit for Two Tat"
     }
 }

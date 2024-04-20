@@ -1,3 +1,5 @@
+use tinyrand::StdRand;
+
 use super::Strategy;
 use crate::{
     decision::Decision,
@@ -12,7 +14,7 @@ pub struct Prober {
     oops: bool,
 }
 impl Strategy for Prober {
-    fn decide(&mut self, _round: usize) -> Decision {
+    fn decide(&mut self, _round: usize, _rng: &mut StdRand) -> Decision {
         if !self.tested {
             self.tested = true;
             return Decision::Steal;
@@ -40,7 +42,7 @@ impl Strategy for Prober {
         }
     }
 
-    fn poolify(&self) -> Box<dyn StratPool> {
+    fn poolify(&self, _rng: &mut StdRand) -> Box<dyn StratPool> {
         Box::new(vec![
             Prober {
                 tested: false,

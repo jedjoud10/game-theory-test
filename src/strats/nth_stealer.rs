@@ -11,7 +11,7 @@ use crate::{
 #[derive(Default, Clone)]
 pub struct EachNthStealer(usize);
 impl Strategy for EachNthStealer {
-    fn decide(&mut self, _round: usize) -> Decision {
+    fn decide(&mut self, _round: usize, _rng: &mut StdRand) -> Decision {
         self.0 += 1;
         self.0 %= 10;
         match self.0 == 0 {
@@ -20,11 +20,11 @@ impl Strategy for EachNthStealer {
         }
     }
 
-    fn poolify(&self) -> Box<dyn StratPool> {
+    fn poolify(&self, _rng: &mut StdRand) -> Box<dyn StratPool> {
         let seed = ClockSeed.next_u64();
         let mut rng = StdRand::seed(seed);
         let vec = (0..ENTITIES_PER_POOL)
-            .map(|_i| EachNthStealer(rng.next_range(0..9)))
+            .map(|_i| EachNthStealer(rng.next_range(0..2)))
             .collect::<Vec<_>>();
         Box::new(vec)
     }

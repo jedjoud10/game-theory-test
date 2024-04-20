@@ -20,11 +20,11 @@ fn main() {
     // Create a pool of multiple boxed strategies so we can duplicate them into their own entity pools
     let mut pool = Vec::<Box<dyn Strategy>>::default();
     pool.push(Box::<Random>::default());
-    pool.push(Box::new(Nice));
-    pool.push(Box::new(NotNice));
+    pool.push(Box::<Nice>::default());
+    pool.push(Box::<NotNice>::default());
     pool.push(Box::<TitForTat>::default());
+    pool.push(Box::<TitForTwoTat>::default());
     pool.push(Box::<EachNthStealer>::default());
-    pool.push(Box::<TwiceGrudge>::default());
     pool.push(Box::<Grudge>::default());
     pool.push(Box::<Prober>::default());
 
@@ -32,11 +32,11 @@ fn main() {
     let mut dedupper = Vec::<(usize, usize)>::new();
 
     // Check user input to see what strategies are allowed
-    println!("Please select which strategies should be used (leave empty if you want all of em)");
+    println!("Please select which strategies should be used (leave empty if you want Nice, NotNice, and TitForTwoTat)");
     for (i, strat) in pool.iter().enumerate()  {
         println!("{}: {}", char::from_u32(i as u32 + 65).unwrap(), strat.name());    
     }
-    let default = "ABCDEFGHIJK".to_string();
+    let default = "BCE".to_string();
     let input = std::io::stdin();
     let mut allowed = input.lines().next().unwrap_or(Ok(default.clone())).unwrap_or(default.clone());
     if allowed.is_empty() {
@@ -53,6 +53,7 @@ fn main() {
     println!("{}", "Using the following strategies:".underline().italic());
     let all = pool.iter().map(|x| x.name()).collect::<Vec<&str>>().join(", ");
     println!("{all}");
+    println!("");
     println!("{}", "With the following parameters:".underline().italic());
     println!("Shared Points: {}", SHARED_POINTS);
     println!("Half Stolen Points: {}", HALF_STOLEN_POINTS);
@@ -62,11 +63,13 @@ fn main() {
     println!("Noise: {}", NOISE);
     println!("Rounds: {}", ROUNDS); 
 
+    println!("");
     println!("{}", "Theoretical Best/Worst case scenario values:".underline().italic());
     println!("Fully taken advantage of: {}", (ENTITIES_PER_POOL as i64) * STOLEN_PENALTY * (ROUNDS as i64));
     println!("Fully took advantage of: {}", (ENTITIES_PER_POOL as i64) * FULLY_STOLEN_POINTS * (ROUNDS as i64));
     println!("Half/half stealing: {}", (ENTITIES_PER_POOL as i64) * HALF_STOLEN_POINTS * (ROUNDS as i64));
     println!("Nice-maxxing: {}", (ENTITIES_PER_POOL as i64) * SHARED_POINTS * (ROUNDS as i64));
+    println!("");
 
     // Total strategy point sum and point sums gained each round 
     let mut total_sums = vec![0i64; pool.len()];
@@ -79,14 +82,15 @@ fn main() {
                 continue;
             }
 
-            let mut p1 = s1.poolify();
-            let mut p2 = s2.poolify();
+            let mut p1 = s1.poolify(&mut rng);
+            let mut p2 = s2.poolify(&mut rng);
             dedupper.push((i, j));
 
             // Make the 2 pools "fight" each other for n number of rounds
             let mut temp: [i64; 2] = [0, 0];
             let mut block_line1 = String::new();
             let mut block_line2 = String::new();
+            let mut decision_sums = [0.0f32; 2];
             for r in 0..ROUNDS {
                 let mut round_temp: [i64; 2] = [0, 0];
                 
@@ -107,6 +111,9 @@ fn main() {
                 
                 block_line1.push_str(&color_f32_char(decisions[0] / entity_count as f32, '█'));
                 block_line2.push_str(&color_f32_char(decisions[1] / entity_count as f32, '█'));
+
+                decision_sums[0] += decisions[0];
+                decision_sums[1] += decisions[1];
             }
 
             // Some cool debugging to see which strategy worked best in this special case
@@ -127,8 +134,8 @@ fn main() {
             let name2 = name2.truecolor(c2.r, c2.g, c2.b);
             let line = format!("{} VS {}", name1, name2);
             println!("{line} => ({}, {})", temp[0], temp[1]);
-            println!("{0: <30} | {1: <10} {2}", name1, "", block_line1);
-            println!("{0: <30} | {1: <10} {2}", name2, "", block_line2);
+            println!("{0: <13} (avg: {1: <6}) | {2: <1} {3}", name1, decision_sums[0], "", block_line1);
+            println!("{0: <13} (avg: {1: <6}) | {2: <1} {3}", name2, decision_sums[1], "", block_line2);
             println!("");
             
         }
@@ -150,7 +157,7 @@ fn main() {
     }
 
     // Create a chart using the lineplot crate
-    let mut chart = Chart::new(280, 120, 0.0, (ROUNDS - 1) as f32);
+    let mut chart = Chart::new(280, 120, 3.0, (ROUNDS - 1) as f32);
     let mut chart = chart.y_tick_display(textplots::TickDisplay::Dense);
     let mut shapes = Vec::<Shape>::default();
     let cpy = &delta_sums;

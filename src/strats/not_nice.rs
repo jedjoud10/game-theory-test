@@ -1,3 +1,5 @@
+use tinyrand::StdRand;
+
 use super::Strategy;
 use crate::{
     decision::Decision,
@@ -8,11 +10,11 @@ use crate::{
 #[derive(Default, Clone)]
 pub struct NotNice;
 impl Strategy for NotNice {
-    fn decide(&mut self, _round: usize) -> Decision {
+    fn decide(&mut self, _round: usize, _rng: &mut StdRand) -> Decision {
         Decision::Steal
     }
 
-    fn poolify(&self) -> Box<dyn StratPool> {
+    fn poolify(&self, _rng: &mut StdRand) -> Box<dyn StratPool> {
         Box::new(vec![NotNice; ENTITIES_PER_POOL])
     }
 

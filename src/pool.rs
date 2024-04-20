@@ -14,8 +14,8 @@ pub fn score_pool(
     rng: &mut StdRand,
     round: usize,
 ) {
-    let a = this.decide_all(round);
-    let b = other.decide_all(round);
+    let a = this.decide_all(round, rng);
+    let b = other.decide_all(round, rng);
     let mut sa = [0; ENTITIES_PER_POOL];
     let mut sb = [0; ENTITIES_PER_POOL];
 
@@ -39,16 +39,16 @@ pub fn score_pool(
 }
 
 pub trait StratPool {
-    fn decide_all(&mut self, round: usize) -> [Decision; ENTITIES_PER_POOL];
+    fn decide_all(&mut self, round: usize, rng: &mut StdRand) -> [Decision; ENTITIES_PER_POOL];
     fn update_all(&mut self, scores: [i64; ENTITIES_PER_POOL]);
 }
 
 impl<T: Strategy> StratPool for Vec<T> {
-    fn decide_all(&mut self, round: usize) -> [Decision; ENTITIES_PER_POOL] {
+    fn decide_all(&mut self, round: usize, rng: &mut StdRand) -> [Decision; ENTITIES_PER_POOL] {
         let mut arr = [Decision::Share; ENTITIES_PER_POOL];
 
         for (i, strat) in self.iter_mut().enumerate() {
-            arr[i] = strat.decide(round);
+            arr[i] = strat.decide(round, rng);
         }
 
         arr

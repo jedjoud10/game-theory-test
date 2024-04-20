@@ -31,8 +31,9 @@ impl Decision {
 }
 
 pub fn color_f32_char(val: f32, c: char) -> String {
-    let r = (1.0 - val) * 255.0f32;
-    let g = val * 255.0f32;
+    let remapped = (val * 0.5 + 0.5).clamp(0.0, 1.0);
+    let r = (1.0 - remapped) * 255.0f32;
+    let g = remapped * 255.0f32;
     let r = r as u8;
     let g = g as u8;
 
