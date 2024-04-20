@@ -13,13 +13,6 @@ pub enum Decision {
 }
 
 impl Decision {
-    pub fn color_char(&self, input: char) -> String {
-        match self {
-            Decision::Share => input.green().to_string(),
-            Decision::Steal => input.red().to_string(),
-        }
-    }
-
     pub fn noisify(&self, rng: &mut StdRand) -> Decision {
         if rng.next_bool(Probability::new(NOISE)) {
             return match self {
@@ -28,6 +21,22 @@ impl Decision {
             }
         } else { *self }
     }
+
+    pub fn to_f32(&self) -> f32 {
+        match self {
+            Decision::Share => 1.0f32,
+            Decision::Steal => -1.0f32,
+        }
+    }
+}
+
+pub fn color_f32_char(val: f32, c: char) -> String {
+    let r = (1.0 - val) * 255.0f32;
+    let g = val * 255.0f32;
+    let r = r as u8;
+    let g = g as u8;
+
+    c.truecolor(r, g, 0).to_string()
 }
 
 pub fn score(a: Decision, b: Decision) -> (i64, i64) {

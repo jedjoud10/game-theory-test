@@ -9,7 +9,8 @@ pub fn score_pool(
     this: &mut Box<dyn StratPool>,
     other: &mut Box<dyn StratPool>,
     sums: &mut [i64; 2],
-    first_entity_decisions: &mut [Decision; 2],
+    decisions: &mut [f32; 2],
+    entity_count_decision_avg: usize,
     rng: &mut StdRand,
     round: usize,
 ) {
@@ -24,9 +25,9 @@ pub fn score_pool(
         
         (sa[i], sb[i]) = score(s1, s2);
 
-        if i == 0 {
-            first_entity_decisions[0] = s1;
-            first_entity_decisions[1] = s2;
+        if i < entity_count_decision_avg {
+            decisions[0] += s1.to_f32();
+            decisions[1] += s2.to_f32();
         }
 
         sums[0] += sa[i];

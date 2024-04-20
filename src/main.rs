@@ -14,7 +14,7 @@ use textplots::{Chart, ColorPlot, Shape, TickDisplayBuilder};
 use tinyrand::{Rand, Seeded, StdRand};
 use tinyrand_std::ClockSeed;
 
-use crate::{decision::Decision, factors::{ENTITIES_PER_POOL, FULLY_STOLEN_POINTS, HALF_STOLEN_POINTS, NOISE, SHARED_POINTS, STOLEN_PENALTY}, pool::score_pool};
+use crate::{decision::{color_f32_char, Decision}, factors::{ENTITIES_PER_POOL, FULLY_STOLEN_POINTS, HALF_STOLEN_POINTS, NOISE, SHARED_POINTS, STOLEN_PENALTY}, pool::score_pool};
 
 fn main() {
     // Create a pool of multiple boxed strategies so we can duplicate them into their own entity pools
@@ -90,8 +90,11 @@ fn main() {
             for r in 0..ROUNDS {
                 let mut round_temp: [i64; 2] = [0, 0];
                 
-                let mut first_entity_decisions = [Decision::Share; 2];
-                score_pool(&mut p1, &mut p2, &mut round_temp, &mut first_entity_decisions, &mut rng, r);
+                let mut decisions = [0.0f32; 2];
+
+                let entity_count = 10;
+
+                score_pool(&mut p1, &mut p2, &mut round_temp, &mut decisions, entity_count, &mut rng, r);
                 
                 total_sums[i] += round_temp[0];
                 total_sums[j] += round_temp[1];
@@ -102,8 +105,8 @@ fn main() {
                 delta_sums[i][r] += round_temp[0];
                 delta_sums[j][r] += round_temp[1];
                 
-                block_line1.push_str(&first_entity_decisions[0].color_char('█'));
-                block_line2.push_str(&first_entity_decisions[1].color_char('█'));
+                block_line1.push_str(&color_f32_char(decisions[0] / entity_count as f32, '█'));
+                block_line2.push_str(&color_f32_char(decisions[1] / entity_count as f32, '█'));
             }
 
             // Some cool debugging to see which strategy worked best in this special case
