@@ -5,10 +5,10 @@ pub const SHARED_POINTS: i64 = 3;
 pub const HALF_STOLEN_POINTS: i64 = 1;
 
 // Penalty (should be negative) given to entities whose got stolen from
-pub const STOLEN_PENALTY: i64 = -1;
+pub const STOLEN_PENALTY: i64 = 0;
 
 // Points given to the party that "steals" points from an entity whose tried to "share" their points
-pub const FULLY_STOLEN_POINTS: i64 = 3;
+pub const FULLY_STOLEN_POINTS: i64 = 5;
 
 // Entities per strategy pool
 pub const ENTITIES_PER_POOL: usize = 100;
@@ -17,4 +17,4 @@ pub const ENTITIES_PER_POOL: usize = 100;
 pub const NOISE: f64 = 0.01;
 
 // Total number of rounds that a pool VS pool "fight" should last for
-pub const ROUNDS: usize = 100;
+pub const ROUNDS: usize = 200;

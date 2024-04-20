@@ -1,4 +1,4 @@
-# Simple Prisoner's Dilemna Test I decided to implement after watching Veritasium's video about it
+# Simple Prisoner's Dilemma Test I decided to implement after watching Veritasium's video about it
 *(also as an efficient way to procrastinate studying for my calculus test)*
 
 Everything is in one file at the moment, and you can implement your own strategy using the ``Strategy`` struct that has the ``decide`` function which returns either ``Decision::Share`` or ``Decision::Steal``.

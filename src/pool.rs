@@ -9,6 +9,7 @@ pub fn score_pool(
     this: &mut Box<dyn StratPool>,
     other: &mut Box<dyn StratPool>,
     sums: &mut [i64; 2],
+    first_entity_decisions: &mut [Decision; 2],
     rng: &mut StdRand,
     round: usize,
 ) {
@@ -17,8 +18,17 @@ pub fn score_pool(
     let mut sa = [0; ENTITIES_PER_POOL];
     let mut sb = [0; ENTITIES_PER_POOL];
 
-    for (i, (s1, s2)) in a.iter().zip(b.iter()).enumerate() {
-        (sa[i], sb[i]) = score(*s1, *s2, rng);
+    for (i, (&s1, &s2)) in a.iter().zip(b.iter()).enumerate() {
+        let s1 = s1.noisify(rng);
+        let s2 = s2.noisify(rng);
+        
+        (sa[i], sb[i]) = score(s1, s2);
+
+        if i == 0 {
+            first_entity_decisions[0] = s1;
+            first_entity_decisions[1] = s2;
+        }
+
         sums[0] += sa[i];
         sums[1] += sb[i];
     }

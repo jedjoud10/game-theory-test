@@ -9,6 +9,7 @@ use crate::{
 pub struct Prober {
     tested: bool,
     abuse: bool,
+    oops: bool,
 }
 impl Strategy for Prober {
     fn decide(&mut self, _round: usize) -> Decision {
@@ -27,13 +28,24 @@ impl Strategy for Prober {
         if self.tested && s == FULLY_STOLEN_POINTS {
             self.abuse = true;
         }
+
+        if s != FULLY_STOLEN_POINTS {
+            if self.oops {
+                self.abuse = false;
+                self.oops = false;
+                self.tested = true;
+            }
+
+            self.oops = true;
+        }
     }
 
     fn poolify(&self) -> Box<dyn StratPool> {
         Box::new(vec![
             Prober {
                 tested: false,
-                abuse: false
+                abuse: false,
+                oops: false,
             };
             ENTITIES_PER_POOL
         ])

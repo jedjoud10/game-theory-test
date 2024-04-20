@@ -6,10 +6,10 @@ use crate::{
 };
 
 #[derive(Default, Clone)]
-pub struct ApologeticGrudge(u32);
-impl Strategy for ApologeticGrudge {
+pub struct TwiceGrudge(u32);
+impl Strategy for TwiceGrudge {
     fn decide(&mut self, _round: usize) -> Decision {
-        match self.0 > 2 {
+        match self.0 >= 2 {
             true => {
                 self.0 = 0;
                 Decision::Steal
@@ -27,10 +27,10 @@ impl Strategy for ApologeticGrudge {
     }
 
     fn poolify(&self) -> Box<dyn StratPool> {
-        Box::new(vec![ApologeticGrudge(0); ENTITIES_PER_POOL])
+        Box::new(vec![TwiceGrudge(0); ENTITIES_PER_POOL])
     }
 
     fn name(&self) -> &'static str {
-        "Apologetic Grudge"
+        "Twice Grudge"
     }
 }

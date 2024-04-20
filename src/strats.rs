@@ -1,6 +1,6 @@
 use crate::{decision::Decision, pool::StratPool};
 
-mod apologetic_grudge;
+mod twice_grudge;
 mod grudge;
 mod nice;
 mod not_nice;
@@ -9,7 +9,7 @@ mod prober;
 mod random;
 mod tit_for_tat;
 
-pub use apologetic_grudge::*;
+pub use twice_grudge::*;
 pub use grudge::*;
 pub use nice::*;
 pub use not_nice::*;
@@ -22,6 +22,5 @@ pub trait Strategy {
     fn decide(&mut self, round: usize) -> Decision;
     fn poolify(&self) -> Box<dyn StratPool>;
     fn score(&mut self, _s: i64) {}
-    fn mutate(&mut self) {}
     fn name(&self) -> &'static str;
 }
