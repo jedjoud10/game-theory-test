@@ -9,9 +9,14 @@ Implemented in one afternoon so most of the code is unoptimized and very ugly un
 
 All thanks to the ``textplots`` crate and ``owo-colors`` for beautiful teminal graphs & colors
 
-![image](https://github.com/jedjoud10/game-theory-test/assets/34755598/491b5917-eadf-4e60-b485-093866a8b1d1)
-![image](https://github.com/jedjoud10/game-theory-test/assets/34755598/e0896ee4-9001-4035-b68c-cf67af5650ba)
-![image](https://github.com/jedjoud10/game-theory-test/assets/34755598/8e0b8f44-dc4d-475f-b289-862d410da2d1)
+# Plotting # of total points gained VS # of rounds played for each strategy:
+![image](https://github.com/jedjoud10/game-theory-test/assets/34755598/4773a5f0-233f-4ef7-9672-96b4d671b5b9)
+
+# Histogram showing the most common decision in a play-off between two strategies:
+#### Red depicts "steal", green depicts "share". Anything in between means that multiple entities (of the same pool) have chosen a different value
+![image](https://github.com/jedjoud10/game-theory-test/assets/34755598/41e3def2-b24f-4a10-ad65-fb4953adce03)
+
+
 
 
 # LICENSE
