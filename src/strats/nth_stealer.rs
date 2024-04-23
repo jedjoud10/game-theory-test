@@ -14,10 +14,7 @@ impl Strategy for EachNthStealer {
     fn decide(&mut self, _round: usize, _rng: &mut StdRand) -> Decision {
         self.0 += 1;
         self.0 %= 10;
-        match self.0 == 0 {
-            true => Decision::Steal,
-            false => Decision::Share,
-        }
+        Decision::from_bool(self.0 != 0)
     }
 
     fn poolify(&self, _rng: &mut StdRand) -> Box<dyn StratPool> {

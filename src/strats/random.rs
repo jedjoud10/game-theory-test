@@ -12,10 +12,7 @@ use crate::{
 pub struct Random;
 impl Strategy for Random {
     fn decide(&mut self, _round: usize, rng: &mut StdRand) -> Decision {
-        match rng.next_bool(Probability::new(0.5)) {
-            true => Decision::Share,
-            false => Decision::Steal,
-        }
+        Decision::from_bool(rng.next_bool(Probability::new(0.5)))
     }
 
     fn poolify(&self, _rng: &mut StdRand) -> Box<dyn StratPool> {

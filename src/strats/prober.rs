@@ -20,10 +20,7 @@ impl Strategy for Prober {
             return Decision::Steal;
         }
 
-        match self.abuse {
-            true => Decision::Steal,
-            false => Decision::Share,
-        }
+        Decision::from_bool(!self.abuse)
     }
 
     fn score(&mut self, s: i64) {

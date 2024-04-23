@@ -28,6 +28,13 @@ impl Decision {
             Decision::Steal => -1.0f32,
         }
     }
+
+    pub fn from_bool(share: bool) -> Decision {
+        match share {
+            true => Decision::Share,
+            false => Decision::Steal,
+        }
+    }
 }
 
 pub fn color_f32_char(val: f32, c: char) -> String {

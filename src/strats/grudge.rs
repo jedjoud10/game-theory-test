@@ -11,10 +11,7 @@ use crate::{
 pub struct Grudge(bool);
 impl Strategy for Grudge {
     fn decide(&mut self, _round: usize, _rng: &mut StdRand) -> Decision {
-        match self.0 {
-            true => Decision::Steal,
-            false => Decision::Share,
-        }
+        Decision::from_bool(!self.0)
     }
 
     fn score(&mut self, s: i64) {

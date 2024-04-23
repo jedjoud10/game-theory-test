@@ -11,17 +11,18 @@ pub fn score_pool(
     sums: &mut [i64; 2],
     decisions: &mut [f32; 2],
     entity_count_decision_avg: usize,
-    rng: &mut StdRand,
+    noise_rng: &mut StdRand,
+    pool_rng: &mut StdRand,
     round: usize,
 ) {
-    let a = this.decide_all(round, rng);
-    let b = other.decide_all(round, rng);
+    let a = this.decide_all(round, pool_rng);
+    let b = other.decide_all(round, pool_rng);
     let mut sa = [0; ENTITIES_PER_POOL];
     let mut sb = [0; ENTITIES_PER_POOL];
 
     for (i, (&s1, &s2)) in a.iter().zip(b.iter()).enumerate() {
-        let s1 = s1.noisify(rng);
-        let s2 = s2.noisify(rng);
+        let s1 = s1.noisify(noise_rng);
+        let s2 = s2.noisify(noise_rng);
         
         (sa[i], sb[i]) = score(s1, s2);
 

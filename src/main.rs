@@ -14,7 +14,7 @@ use textplots::{Chart, ColorPlot, Shape, TickDisplayBuilder};
 use tinyrand::{Rand, Seeded, StdRand};
 use tinyrand_std::ClockSeed;
 
-use crate::{decision::{color_f32_char, Decision}, factors::{ENTITIES_PER_POOL, FULLY_STOLEN_POINTS, HALF_STOLEN_POINTS, NOISE, SHARED_POINTS, STOLEN_PENALTY}, pool::score_pool};
+use crate::{decision::{color_f32_char, Decision}, factors::{print_params, ENTITIES_PER_POOL, FULLY_STOLEN_POINTS, HALF_STOLEN_POINTS, HISTOGRAM_ENTITY_COUNT, NOISE, SHARED_POINTS, STOLEN_PENALTY}, pool::score_pool};
 
 fn main() {
     // Create a pool of multiple boxed strategies so we can duplicate them into their own entity pools
@@ -49,27 +49,8 @@ fn main() {
             pool.remove(i);
         }
     }
-
-    println!("{}", "Using the following strategies:".underline().italic());
-    let all = pool.iter().map(|x| x.name()).collect::<Vec<&str>>().join(", ");
-    println!("{all}");
-    println!("");
-    println!("{}", "With the following parameters:".underline().italic());
-    println!("Shared Points: {}", SHARED_POINTS);
-    println!("Half Stolen Points: {}", HALF_STOLEN_POINTS);
-    println!("Stolen Penalty: {}", STOLEN_PENALTY);
-    println!("Fully Stolen Points: {}", FULLY_STOLEN_POINTS);
-    println!("Entities Per Pool: {}", ENTITIES_PER_POOL);
-    println!("Noise: {}", NOISE);
-    println!("Rounds: {}", ROUNDS); 
-
-    println!("");
-    println!("{}", "Theoretical Best/Worst case scenario values:".underline().italic());
-    println!("Fully taken advantage of: {}", (ENTITIES_PER_POOL as i64) * STOLEN_PENALTY * (ROUNDS as i64));
-    println!("Fully took advantage of: {}", (ENTITIES_PER_POOL as i64) * FULLY_STOLEN_POINTS * (ROUNDS as i64));
-    println!("Half/half stealing: {}", (ENTITIES_PER_POOL as i64) * HALF_STOLEN_POINTS * (ROUNDS as i64));
-    println!("Nice-maxxing: {}", (ENTITIES_PER_POOL as i64) * SHARED_POINTS * (ROUNDS as i64));
-    println!("");
+    
+    print_params(&pool);
 
     // Total strategy point sum and point sums gained each round 
     let mut total_sums = vec![0i64; pool.len()];
@@ -82,62 +63,59 @@ fn main() {
                 continue;
             }
 
-            let mut p1 = s1.poolify(&mut rng);
-            let mut p2 = s2.poolify(&mut rng);
             dedupper.push((i, j));
+            
+            // Create the pools for the two strategies
+            let mut pool_rng = StdRand::seed(1234);
+            let mut p1 = s1.poolify(&mut pool_rng);
+            let mut p2 = s2.poolify(&mut pool_rng);
 
-            // Make the 2 pools "fight" each other for n number of rounds
-            let mut temp: [i64; 2] = [0, 0];
-            let mut block_line1 = String::new();
-            let mut block_line2 = String::new();
+            // Setup temp vars for round play-off
+            let mut playoff_points: [f32; 2] = [0.0, 0.0];
+            let mut histograms = [String::new(), String::new()];
             let mut decision_sums = [0.0f32; 2];
+            let local_to_global_indices = [i, j];
+            
+            // Make the 2 pools "fight" each other for n number of rounds
             for r in 0..ROUNDS {
-                let mut round_temp: [i64; 2] = [0, 0];
-                
+                let mut temp_round_points: [i64; 2] = [0, 0];                
                 let mut decisions = [0.0f32; 2];
 
-                let entity_count = 10;
-
-                score_pool(&mut p1, &mut p2, &mut round_temp, &mut decisions, entity_count, &mut rng, r);
+                score_pool(&mut p1, &mut p2, &mut temp_round_points, &mut decisions, HISTOGRAM_ENTITY_COUNT, &mut rng, &mut pool_rng, r);
                 
-                total_sums[i] += round_temp[0];
-                total_sums[j] += round_temp[1];
-                
-                temp[0] += round_temp[0];
-                temp[1] += round_temp[1];
-
-                delta_sums[i][r] += round_temp[0];
-                delta_sums[j][r] += round_temp[1];
-                
-                block_line1.push_str(&color_f32_char(decisions[0] / entity_count as f32, '█'));
-                block_line2.push_str(&color_f32_char(decisions[1] / entity_count as f32, '█'));
-
-                decision_sums[0] += decisions[0];
-                decision_sums[1] += decisions[1];
+                // So point summing logic here
+                for local in 0..2 {
+                    let global = local_to_global_indices[local];
+                    total_sums[global] += temp_round_points[local];
+                    delta_sums[global][r] += temp_round_points[local];
+                    playoff_points[local] += temp_round_points[local] as f32;
+                    histograms[local].push_str(&color_f32_char(decisions[local] / HISTOGRAM_ENTITY_COUNT as f32, '█'));
+                    decision_sums[local] += decisions[local];                    
+                }
             }
 
             // Some cool debugging to see which strategy worked best in this special case
-            let name1 = s1.name();
-            let name2 = s2.name();
-            
-            // Calculate percent difference first
-            let avg = (temp[0] as f32 + temp[1] as f32) / 2.0;
-            let d = temp[0] as f32 - temp[1] as f32;
-            let diff = d / avg;
+            let names = [s1.name(), s2.name()];
+            let avg = playoff_points.iter().sum::<f32>() / 2.0;
+            let diff = (playoff_points[1] - playoff_points[0]) / avg;
 
-            let max_diff = 0.15f32;
-            let percent = (diff / max_diff).clamp(-1.0f32, 1.0f32) * 0.5f32 + 0.5;
-            let c1 = rgb::RGB::new(1.0-percent, percent, 0.0).map(|x| (x * 255.0f32) as u8);
-            let c2 = rgb::RGB::new(percent, 1.0-percent, 0.0).map(|x| (x * 255.0f32) as u8);
+            let line = format!("{} VS {}", names[0], names[1]);
+            println!("{line} => ({}, {})", playoff_points[0], playoff_points[1]);
 
-            let name1 = name1.truecolor(c1.r, c1.g, c1.b);
-            let name2 = name2.truecolor(c2.r, c2.g, c2.b);
-            let line = format!("{} VS {}", name1, name2);
-            println!("{line} => ({}, {})", temp[0], temp[1]);
-            println!("{0: <13} (avg: {1: <6}) | {2: <1} {3}", name1, decision_sums[0], "", block_line1);
-            println!("{0: <13} (avg: {1: <6}) | {2: <1} {3}", name2, decision_sums[1], "", block_line2);
-            println!("");
-            
+            for local in 0..2 {
+                let max_diff = 0.15f32;
+                let mut percent = (diff / max_diff).clamp(-1.0f32, 1.0f32) * 0.5f32 + 0.5;
+
+                // swap percent if we're the second one (loss)
+                if local == 1 {
+                    percent = 1.0 - percent;
+                }
+
+                let red = ((1.0-percent) * 255.0f32) as u8;
+                let green = (percent * 255.0f32) as u8;
+                let colored = names[local].truecolor(red, green, 0);
+                println!("{0: <20} (avg: {1: <6}) | {2: <1} {3}", colored, decision_sums[local], "", histograms[local]);                  
+            }            
         }
     }
 
